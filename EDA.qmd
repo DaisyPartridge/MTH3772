@@ -1,0 +1,52 @@
+---
+title: "EDA"
+format:
+  html:
+    code-fold: true
+---
+
+```{r}
+# Load required libraries
+library(DBI)
+library(dplyr)
+library(ggplot2)
+library(palmerpenguins)
+library(duckdb)
+
+# Disconnect and reconnect to DuckDB
+
+con <- DBI::dbConnect(duckdb::duckdb(), dbdir = "my-db.duckdb")
+
+
+
+# Query the "penguins" table from the database
+df_from_db <- tbl(con, "penguins") %>% collect()
+
+# Perform data summarization by species and sex
+summary_table <- df_from_db %>%
+  group_by(species, sex) %>%
+  summarise(
+    across(
+      where(is.numeric), 
+      \(x) mean(x, na.rm = TRUE)
+    )
+  ) %>%
+  collect()
+
+# Display the summary table
+knitr::kable(summary_table)
+
+# Perform data visualization: Penguin Size vs Mass by Species
+df_from_db %>%
+  ggplot(aes(x = bill_length_mm, y = body_mass_g, color = species)) +
+  geom_point() + 
+  geom_smooth(method = "lm")
+
+# Disconnect from the database when done
+dbDisconnect(con, shutdown = TRUE)
+
+```
+
+```{r}
+DBI::dbDisconnect(con, shutdown = TRUE)
+```
