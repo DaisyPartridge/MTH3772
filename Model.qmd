@@ -1,0 +1,73 @@
+---
+title: "Model"
+format:
+  html:
+    code-fold: true
+---
+
+```{python}
+import duckdb
+from palmerpenguins import penguins
+from pandas import get_dummies
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn import preprocessing
+from vetiver import VetiverModel
+from vetiver import VetiverModel, vetiver_pin_write
+from vetiver import VetiverAPI
+from pins import board_folder
+
+```
+
+```{python}
+from vetiver import VetiverModel, vetiver_pin_write
+import duckdb
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+
+# Load and preprocess your data
+df = penguins.load_penguins().dropna()
+X = get_dummies(df[['bill_length_mm', 'species', 'sex']], drop_first=True)
+y = df['body_mass_g']
+
+# Train your model
+model = LinearRegression().fit(X, y)
+
+v = VetiverModel(model, model_name = 'penguin_model', prototype_data = X)
+
+# Create a VetiverModel
+b = board_folder('data/model', allow_pickle_read=True)
+
+
+# Write the VetiverModel to the pin
+vetiver_pin_write(b, v)
+
+# Now you can read the VetiverModel from the pin
+v = VetiverModel.from_pin(b, 'penguin_model')
+
+# Create an API for the VetiverModel
+from vetiver import VetiverAPI
+app = VetiverAPI(v, check_prototype=True)
+#app.run(port = 8080)
+#http://localhost:8080
+
+
+
+
+import duckdb
+
+# Establish a connection to the DuckDB database
+con = duckdb.connect(database='my-db.duckdb')
+
+# Execute the SQL query, fetch the result into a DataFrame, and drop NaN values
+df = con.execute("SELECT * FROM penguins").fetchdf().dropna()
+
+# Close the connection
+con.close()
+
+from vetiver import prepare_docker
+prepare_docker(b, "penguin_model")
+
+```
+
+\% remember to run py app.py
